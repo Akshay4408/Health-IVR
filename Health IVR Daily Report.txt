@@ -1,0 +1,152 @@
+#!/usr/bin/env python
+# coding: utf-8
+
+# In[121]:
+
+
+import pandas as pd
+import numpy as np
+
+
+# In[122]:
+
+
+Client = pd.read_excel(r"C:\Users\reportsn\Desktop\Health Today.xlsx")
+Client.head()
+
+
+# In[123]:
+
+
+
+
+Client['Date'] = pd.to_datetime(Client['call_date'], errors='coerce')
+
+Client['Date'] = Client['Date'].dt.strftime('%d-%b')
+
+Client.head()
+
+
+# In[124]:
+
+
+#Client.dropna(subset=['status_name'], inplace=True)
+
+
+# In[125]:
+
+
+
+
+DL = pd.read_excel(r"C:\Users\reportsn\Desktop\Health IVR\Dispositions Data\Dispositions Data.xlsx")
+DL.head()
+
+
+# In[126]:
+
+
+Export = pd.read_excel(r"C:\Users\reportsn\Desktop\Health IVR\Jan.xlsx")
+Export.dropna(subset=['status_name'], inplace=True)
+Export.head()
+
+
+# In[127]:
+
+
+
+
+Export = pd.merge(Export, DL, how='left',
+        left_on='status_name', right_on='status_name')
+Export = Export.rename(columns = {'full_name' : 'USER NAME'})
+
+Export.head()
+
+
+# In[128]:
+
+
+
+
+Export.sort_values(by = ['phone_number_dialed', 'call_date'], ascending = [True, False], na_position = 'first')
+Export.head()
+
+
+# In[129]:
+
+
+Export = Export.drop_duplicates(
+  subset = ['phone_number_dialed'],
+  keep = 'last').reset_index(drop = True)
+
+
+# In[130]:
+
+
+
+
+Main = pd.merge(Client, Export,  how='left',
+        left_on='phone_number_dialed', right_on='phone_number_dialed')
+Main = Main.rename(columns = {'full_name' : 'USER NAME'})
+
+Main.head()
+
+
+# In[131]:
+
+
+Main["status_name"].fillna("No Dial", inplace = True)
+Main["Dispositions"].fillna("No Dial", inplace = True)
+Main.head()
+
+
+# In[132]:
+
+
+RawReport  =pd.pivot_table(data= Main, index = ['Date'], columns= ['Dispositions'],values = 'phone_number_dialed', aggfunc = np.size, fill_value=0, margins = True, margins_name= 'Total')
+
+RawReport = RawReport.rename(columns={'Total': 'Total Data Received'})
+RawReport = RawReport[['Total Data Received', 'Connect', 'Not Connect', 'No Dial']]
+
+RawReport
+
+
+# In[133]:
+
+
+RawReport1  =pd.pivot_table(data= Main, index = ['Dispositions', 'status_name'], columns= ['Date'],values = 'phone_number_dialed', aggfunc = np.size, fill_value=0, margins = True, margins_name= 'Total')
+
+#RawReport1 = RawReport.rename(columns={'Total': 'Total Data Received'})
+#RawReport1 = RawReport[['Total Data Received', 'Connect', 'Not Connect', 'No Dial']]
+
+RawReport1
+
+
+# In[134]:
+
+
+writer = pd.ExcelWriter(r"C:\Users\reportsn\Desktop\Akshay\Health IVR Dispositions.xlsx", engine='xlsxwriter')
+
+
+# In[135]:
+
+
+RawReport.to_excel(writer, sheet_name='Count')
+
+RawReport1.to_excel(writer, sheet_name='Dispositions')
+
+Export.to_excel(writer, sheet_name='Dump')
+
+
+
+# In[136]:
+
+
+writer.save()
+
+
+# In[ ]:
+
+
+
+
+
